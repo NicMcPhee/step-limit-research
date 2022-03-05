@@ -1,0 +1,38 @@
+---
+title: "Research"
+author: "Richard Lussier"
+date: "12/9/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library('ggplot2')
+```
+
+
+```{r}
+researchData = read.table("dataset.txt", header=T, sep="")
+
+plot(x=researchData$StepLimit, y=log(researchData$TotalError))
+
+ggplot(researchData, aes(x=StepLimit, y=FailedCases, color=factor(Generalized))) + geom_point(alpha=0.1)
+
+ggplot(researchData, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber))) + geom_line(alpha=0.1)
+```
+
+Let's add a new column that is true if `FailedCases = FailedByStepLimit`:
+
+```{r}
+researchData$AllFailuresOutOfSteps = (researchData$FailedCases == researchData$FailedByStepLimit)
+
+equalFailures = subset(researchData, researchData$AllFailuresOutOfSteps)
+
+nrow(equalFailures)
+
+ggplot(equalFailures, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+```
+
+
+
