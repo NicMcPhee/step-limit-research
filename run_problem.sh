@@ -21,8 +21,7 @@ for ((j=1; j<=$iterations; j++)) do
 	beginningIndex=$(($startingVal + $addToStart))
 	
 	for ((i=$beginningIndex; i<$beginningIndex + $numCalls; i++)) do
-		lein run -m $problemName > $directoryForRun/$fileName$i.txt :simplification? true
-	       :simplification-k $kSteps :simplification-steps $simpSteps &
+		lein run -m $problemName > $directoryForRun/$fileName$i.txt :simplification? true :simplification-k $kSteps :simplification-steps $simpSteps &
 	done
 
 	echo "Doing iteration $j"
