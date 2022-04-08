@@ -9,29 +9,82 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library('ggplot2')
+library('dplyr')
 ```
 
 
 ```{r}
-researchData = read.table("dataset.txt", header=T, sep="")
+researchData = read.table("all_but_13.txt", header=T, sep="")
 
-plot(x=researchData$StepLimit, y=log(researchData$TotalError))
+plot(x=researchData$StepLimit, y=log(researchData$TotalError)) + geom_point(alpha=0.1)
 
-ggplot(researchData, aes(x=StepLimit, y=FailedCases, color=factor(Generalized))) + geom_point(alpha=0.1)
+ggplot(researchData, aes(x=StepLimit, y=NumFailedCases, color=factor(Generalized.))) + geom_point(alpha=0.1)
 
-ggplot(researchData, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber))) + geom_line(alpha=0.1)
+ggplot(researchData, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber))) + geom_line(alpha=0.1)
 ```
 
 Let's add a new column that is true if `FailedCases = FailedByStepLimit`:
 
 ```{r}
-researchData$AllFailuresOutOfSteps = (researchData$FailedCases == researchData$FailedByStepLimit)
+researchData$AllFailuresOutOfSteps = (researchData$NumFailedCases == researchData$FailedByStepLimit)
 
 equalFailures = subset(researchData, researchData$AllFailuresOutOfSteps)
 
 nrow(equalFailures)
 
-ggplot(equalFailures, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+ggplot(equalFailures, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+```
+```{r}
+fewFailedCases <- equalFailures %>%
+  group_by(RunNumber) %>%
+  filter(max(NumFailedCases) < 250)
+
+ggplot(fewFailedCases, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+```
+```{r}
+middleFailedCases <- equalFailures %>%
+  group_by(RunNumber) %>%
+  filter(max(NumFailedCases) >= 750 && max(NumFailedCases) < 1250)
+
+ggplot(middleFailedCases, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+```
+```{r}
+higherFailedCases <- equalFailures %>%
+  group_by(RunNumber) %>%
+  filter(max(NumFailedCases) >= 1250 && max(NumFailedCases) < 1970)
+
+ggplot(higherFailedCases, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+```
+```{r}
+highestFailedCases <- equalFailures %>%
+  group_by(RunNumber) %>%
+  filter(max(NumFailedCases) >= 1970 && max(NumFailedCases) < 2001)
+
+ggplot(highestFailedCases, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+```
+
+```{r}
+reachesZeroFailedCases <- equalFailures %>%
+  group_by(RunNumber) %>%
+  filter(min(NumFailedCases) == 0)
+
+ggplot(reachesZeroFailedCases, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+```
+
+```{r}
+run70 <- subset(equalFailures, equalFailures$RunNumber == 70)
+
+ggplot(run70, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+
+ggplot(run70, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE) + xlim(1950, 2020) + ylim(0, 50)
+```
+```{r}
+runsRunningOutAt2200 <- subset(researchData, (researchData$StepLimit == 2200) & (researchData$AllFailuresOutOfSteps) & researchData$TotalError > 0 & researchData$NumFailedCases < 100)$RunNumber
+
+runningOutAt2200 <- researchData %>%
+  filter(RunNumber %in% runsRunningOutAt2200)
+
+ggplot(runningOutAt2200, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
 ```
 
 
