@@ -111,7 +111,18 @@ lastIndexOutOfSteps <- equalFailuresLastIndex %>%
   group_by(RunNumber) %>%
   filter(min(dataset$FailedCases) == 0)
 
-generalizedAtSomePoint <- subset(lastIndexOutOfSteps, (lastIndexOutOfSteps$StepLimit != 200 & lastIndexOutOfSteps$TotalError == 0))
+#generalizedAtSomePoint <- subset(lastIndexOutOfSteps, lastIndexOutOfSteps$TotalError == 0)
 
-generalizedAt200 <- subset(generalizedAtSomePoint, generalizedAtSomePoint$StepLimit == 200 & generalizedAtSomePoint$TotalError > 0)
+generalizedNotAt200 <- subset(lastIndexOutOfSteps, (lastIndexOutOfSteps$StepLimit == 200 & lastIndexOutOfSteps$TotalError > 0))$RunNumber
+
+didntGenAt200 <- dataset %>%
+  filter(RunNumber %in% generalizedNotAt200)
+
+generalizedSomewhereNot200 <- subset(didntGenAt200, didntGenAt200$TotalError == 0)$RunNumber
+
+didntGenAt200 <- didntGenAt200 %>%
+  filter(RunNumber %in% generalizedSomewhereNot200)
+
+ggplot(didntGenAt200, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+
 ```
