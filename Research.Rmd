@@ -1,4 +1,3 @@
----
 title: "Research"
 author: "Richard Lussier"
 date: "12/9/2021"
@@ -14,9 +13,17 @@ library('dplyr')
 
 
 ```{r}
-researchData = read.table("all_but_13.txt", header=T, sep="")
+researchData = read.table("MiddleCharData.txt", header=T, sep="\t")
 
-plot(x=researchData$StepLimit, y=log(researchData$TotalError)) + geom_point(alpha=0.1)
+researchData$NumFailedCases <- as.numeric(researchData$NumFailedCases)
+researchData$TotalError <- as.numeric(researchData$TotalError)
+researchData$StepLimit <- as.numeric(researchData$StepLimit)
+researchData$FailedByStepLimit <- as.numeric(researchData$FailedByStepLimit)
+researchData$RunNumber <- as.numeric(researchData$RunNumber)
+researchData$Succeeded. <- as.logical(researchData$Succeeded.)
+researchData$Generalized. <- as.logical(researchData$Generalized.)
+
+#plot(x=researchData$StepLimit, y=log(researchData$TotalError)) + geom_point(alpha=0.1)
 
 ggplot(researchData, aes(x=StepLimit, y=NumFailedCases, color=factor(Generalized.))) + geom_point(alpha=0.1)
 
@@ -76,10 +83,11 @@ run70 <- subset(equalFailures, equalFailures$RunNumber == 70)
 
 ggplot(run70, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
 
-ggplot(run70, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE) + xlim(1950, 2020) + ylim(0, 50)
+ggplot(run70, aes(x=as.numeric(StepLimit), y=as.numeric(NumFailedCases), group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE) + xlim(1950,2020) + ylim(0,50)
 ```
+
 ```{r}
-runsRunningOutAt2200 <- subset(researchData, (researchData$StepLimit == 2200) & (researchData$AllFailuresOutOfSteps) & researchData$TotalError > 0 & researchData$NumFailedCases < 100)$RunNumber
+runsRunningOutAt2200 <- subset(researchData, (researchData$StepLimit == 2200) & (researchData$AllFailuresOutOfSteps) & researchData$TotalError > 0 & as.numeric(researchData$NumFailedCases) < 100)$RunNumber
 
 runningOutAt2200 <- researchData %>%
   filter(RunNumber %in% runsRunningOutAt2200)
@@ -87,5 +95,48 @@ runningOutAt2200 <- researchData %>%
 ggplot(runningOutAt2200, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
 ```
 
+```{r}
+dataset$AllFailuresOutOfSteps = (dataset$FailedCases == dataset$FailedByStepLimit)
 
+runsRunningOutAt350 <- subset(dataset, dataset$StepLimit == 350 & dataset$AllFailuresOutOfSteps & dataset$TotalError > 0 & dataset$FailedCases < 100)$RunNumber
 
+runningOutAt350 <- dataset %>%
+  filter(RunNumber %in% runsRunningOutAt350)
+
+ggplot(runningOutAt350, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+```
+
+```{r}
+equalFailuresLastIndex = subset(dataset, dataset$AllFailuresOutOfSteps)
+
+lastIndexOutOfSteps <- equalFailuresLastIndex %>%
+  group_by(RunNumber) %>%
+  filter(min(dataset$FailedCases) == 0)
+
+#generalizedAtSomePoint <- subset(lastIndexOutOfSteps, lastIndexOutOfSteps$TotalError == 0)
+
+generalizedNotAt200 <- subset(lastIndexOutOfSteps, (lastIndexOutOfSteps$StepLimit == 200 & lastIndexOutOfSteps$TotalError > 0))$RunNumber
+
+didntGenAt200 <- dataset %>%
+  filter(RunNumber %in% generalizedNotAt200)
+
+generalizedSomewhereNot200 <- subset(didntGenAt200, didntGenAt200$TotalError == 0)$RunNumber
+
+didntGenAt200 <- didntGenAt200 %>%
+  filter(RunNumber %in% generalizedSomewhereNot200)
+
+ggplot(didntGenAt200, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+
+```
+
+```{r}
+ggplot(didntGenAt200, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE) + xlim(190, 210) + ylim(0, 20)
+```
+
+```{r}
+someRunNumbersFailingLessThan20 <- head(unique(subset(didntGenAt200, (didntGenAt200$FailedCases < 20) & (didntGenAt200$StepLimit == 200))$RunNumber), 10)
+
+someRunsFailingLessThan20 <- subset(didntGenAt200, didntGenAt200$RunNumber %in% someRunNumbersFailingLessThan20)
+
+ggplot(someRunsFailingLessThan20, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE) + xlim(190, 210) + ylim(0, 20)
+```
