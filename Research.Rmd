@@ -46,8 +46,16 @@ fewFailedCases <- equalFailures %>%
   group_by(RunNumber) %>%
   filter(max(NumFailedCases) < 250)
 
-ggplot(fewFailedCases, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+ggplot(fewFailedCases, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=TRUE)
 ```
+```{r}
+fourFiveand92 <- equalFailures %>%
+  group_by(RunNumber) %>%
+  filter(RunNumber == 95 || RunNumber == 37)
+
+ggplot(fourFiveand92, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=TRUE)
+```
+
 ```{r}
 middleFailedCases <- equalFailures %>%
   group_by(RunNumber) %>%
@@ -102,7 +110,7 @@ runsRunningOutAt350 <- subset(dataset, dataset$StepLimit == 350 & dataset$AllFai
 runningOutAt350 <- dataset %>%
   filter(RunNumber %in% runsRunningOutAt350)
 
-ggplot(runningOutAt350, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+ggplot(runningOutAt350, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=TRUE)
 ```
 ```{r}
 equalFailuresLastIndex = subset(dataset, dataset$AllFailuresOutOfSteps)
@@ -111,9 +119,16 @@ lastIndexOutOfSteps <- equalFailuresLastIndex %>%
   group_by(RunNumber) %>%
   filter(min(dataset$FailedCases) == 0)
 
+failedRuns <- dataset %>%
+  group_by(RunNumber) %>%
+  filter(min(dataset$FailedCases) == 0)
+
+
 #generalizedAtSomePoint <- subset(lastIndexOutOfSteps, lastIndexOutOfSteps$TotalError == 0)
 
 generalizedNotAt200 <- subset(lastIndexOutOfSteps, (lastIndexOutOfSteps$StepLimit == 200 & lastIndexOutOfSteps$TotalError > 0))$RunNumber
+
+generalizedAt200 <- subset(lastIndexOutOfSteps, (lastIndexOutOfSteps$StepLimit == 200 & lastIndexOutOfSteps$TotalError == 0))$RunNumber
 
 didntGenAt200 <- dataset %>%
   filter(RunNumber %in% generalizedNotAt200)
@@ -123,6 +138,7 @@ generalizedSomewhereNot200 <- subset(didntGenAt200, didntGenAt200$TotalError == 
 didntGenAt200 <- didntGenAt200 %>%
   filter(RunNumber %in% generalizedSomewhereNot200)
 
+#Would most likely have to clean this up. Maybe limit the amount of runs per graph and have multiple?
 ggplot(didntGenAt200, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
 
 ```
