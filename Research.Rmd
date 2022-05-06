@@ -104,6 +104,10 @@ ggplot(runningOutAt2200, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumb
 ```
 
 ```{r}
+# The new AllFailuresOutOfSteps column is true for any program & step limit where
+# that program fails all of its test cases because it runs out of steps. So if
+# *any* case completes "normally" that (program, step limit) pair won't be set
+# to TRUE here.
 dataset$AllFailuresOutOfSteps = (dataset$FailedCases == dataset$FailedByStepLimit)
 
 runsRunningOutAt350 <- subset(dataset, dataset$StepLimit == 350 & dataset$AllFailuresOutOfSteps & dataset$TotalError > 0 & dataset$FailedCases < 100)$RunNumber
@@ -115,20 +119,24 @@ ggplot(runningOutAt350, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber),
 ```
 
 ```{r}
+# All the (program, step limit) pairs where where all failures
+# came from running out of steps.
 equalFailuresLastIndex = subset(dataset, dataset$AllFailuresOutOfSteps)
 
+# All the programs (i.e., runs) that generalize for at least one
+# step limit, i.e., min(FailedCases) == 0, i.e., the min across
+# all the possible step limits is 0.
 lastIndexOutOfSteps <- equalFailuresLastIndex %>%
   group_by(RunNumber) %>%
-  filter(min(dataset$FailedCases) == 0)
-
-failedRuns <- dataset %>%
-  group_by(RunNumber) %>%
-  filter(min(dataset$FailedCases) == 0)
-
+  filter(min(FailedCases) == 0)
 
 #generalizedAtSomePoint <- subset(lastIndexOutOfSteps, lastIndexOutOfSteps$TotalError == 0)
 
-generalizedNotAt200 <- subset(lastIndexOutOfSteps, (lastIndexOutOfSteps$StepLimit == 200 & lastIndexOutOfSteps$TotalError > 0))$RunNumber
+# All the programs that generalize somewhere *other* than at
+# step limit 200.
+generalizedNotAt200 <- subset(lastIndexOutOfSteps, 
+                              (lastIndexOutOfSteps$StepLimit == 200 
+                               & lastIndexOutOfSteps$TotalError > 0))$RunNumber
 
 generalizedAt200 <- subset(lastIndexOutOfSteps, (lastIndexOutOfSteps$StepLimit == 200 & lastIndexOutOfSteps$TotalError == 0))$RunNumber
 
