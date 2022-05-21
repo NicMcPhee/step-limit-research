@@ -1,4 +1,4 @@
-RunNumber Succeeded  Generalized  StepLimit TotalError  FailedCases FailedByStepLimit
+RunNumber Succeeded.  Generalized.  StepLimit TotalError  NumFailedCases FailedByStepLimit
 0	false	false	150	1666	147	147
 0	false	false	151	2072	151	151
 0	false	false	152	1686	147	147

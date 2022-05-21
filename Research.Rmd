@@ -9,6 +9,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library('ggplot2')
 library('dplyr')
+library('ggpubr')
+library('gridExtra')
 ```
 
 
@@ -46,14 +48,20 @@ fewFailedCases <- equalFailures %>%
   group_by(RunNumber) %>%
   filter(max(NumFailedCases) < 250)
 
+succeededAt2000 <- researchData %>%
+  group_by(RunNumber) %>%
+  filter(StepLimit == 2000 & Succeeded. == TRUE)
+
+generalizedAt2000 <- subset(researchData, (researchData$StepLimit == 2000 & researchData$TotalError == 0))$RunNumber
+
 ggplot(fewFailedCases, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=TRUE)
 ```
 ```{r}
 fourFiveand92 <- equalFailures %>%
   group_by(RunNumber) %>%
-  filter(RunNumber == 95 || RunNumber == 37)
+  filter(RunNumber == 95 || RunNumber == 37 || RunNumber == 28)
 
-ggplot(fourFiveand92, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=TRUE)
+ggplot(fourFiveand92, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
 ```
 
 ```{r}
@@ -83,6 +91,19 @@ reachesZeroFailedCases <- equalFailures %>%
   group_by(RunNumber) %>%
   filter(min(NumFailedCases) == 0)
 
+midCharSucceedSomePoint <- equalFailures %>%
+  group_by(RunNumber) %>%
+  filter(min(equalFailures$NumFailedCases) == 0)
+
+generalizedNotAt2000 <- subset(reachesZeroFailedCases, (reachesZeroFailedCases$StepLimit == 2000 & reachesZeroFailedCases$TotalError > 0))$RunNumber
+
+#MidGeneralizedSomewhereNot2000 <- subset(MiddleCharData, MiddleCharData$TotalError == 0 & RunNumber Negate(%in%) generalizedAt2000)$RunNumber
+
+GenSomewhereElse <- researchData %>%
+  filter(RunNumber %in% generalizedNotAt2000)
+
+ggplot(GenSomewhereElse, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+
 ggplot(reachesZeroFailedCases, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
 ```
 
@@ -91,7 +112,9 @@ run70 <- subset(equalFailures, equalFailures$RunNumber == 70)
 
 ggplot(run70, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
 
-ggplot(run70, aes(x=as.numeric(StepLimit), y=as.numeric(NumFailedCases), group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE) + xlim(1950,2020) + ylim(0,50)
+ggplot(run70, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE) + coord_cartesian(xlim = c(1950,2020), ylim = c(0,50))
+  
+  #xlim(1950,2020) + ylim(0,50)
 ```
 
 ```{r}
@@ -111,7 +134,7 @@ runsRunningOutAt350 <- subset(dataset, dataset$StepLimit == 350 & dataset$AllFai
 runningOutAt350 <- dataset %>%
   filter(RunNumber %in% runsRunningOutAt350)
 
-ggplot(runningOutAt350, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=TRUE)
+ggplot(runningOutAt350, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
 ```
 
 ```{r}
@@ -155,4 +178,160 @@ someRunNumbersFailingLessThan20 <- head(unique(subset(didntGenAt200, (didntGenAt
 someRunsFailingLessThan20 <- subset(didntGenAt200, didntGenAt200$RunNumber %in% someRunNumbersFailingLessThan20)
 
 ggplot(someRunsFailingLessThan20, aes(x=StepLimit, y=FailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE) + xlim(190, 210) + ylim(0, 20)
+```
+
+```{r}
+`500popMC`$AllFailuresOutOfSteps = (`500popMC`$NumFailedCases == `500popMC`$FailedByStepLimit)
+
+equalFailures200Mid = subset(`500popMC`, `500popMC`$AllFailuresOutOfSteps)
+
+Mid200OutOfSteps <- equalFailures200Mid %>%
+  group_by(RunNumber) %>%
+  filter(min(`500popMC`$NumFailedCases) == 0)
+
+MidGeneralizedNotAt200 <- subset(Mid200OutOfSteps, (Mid200OutOfSteps$StepLimit == 200 & Mid200OutOfSteps$TotalError > 0))$RunNumber
+
+MidGeneralizedAt200 <- subset(Mid200OutOfSteps, (Mid200OutOfSteps$StepLimit == 200 & Mid200OutOfSteps$TotalError == 0))$RunNumber
+
+MidGenAt200 <- `500popMC` %>%
+  filter(RunNumber %in% MidGeneralizedAt200)
+
+MidDidntGenAt200 <- `500popMC` %>%
+  filter(RunNumber %in% MidGeneralizedNotAt200)
+
+MidGeneralizedSomewhereNot200 <- subset(MidDidntGenAt200, MidDidntGenAt200$TotalError == 0)$RunNumber
+
+GenSomewhere <- `500popMC` %>%
+  filter(RunNumber %in% MidGeneralizedSomewhereNot200)
+
+ggplot(`500popMC`, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+
+ggplot(MidDidntGenAt200, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+
+ggplot(MidGenAt200, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+
+ggplot(GenSomewhere,aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+```
+```{r}
+
+#This function combines all of the helper functions below. It takes the dataset, the step limit the problem was originally run on, and a string, which is the .png file you would like to export the graphs to (for example, "example.png").
+GenerateGraphs <- function(givenData, originalStepLimit, saveToFile, groupPlots=TRUE) {
+  
+  givenData <- WrangleData(givenData)
+  
+  #Store the graphs into variables
+  graph1 <- GraphOriginalGeneralizations(givenData, originalStepLimit)
+  graph2 <- GraphOtherGeneralizations(givenData, originalStepLimit)
+  graph3 <- GraphRunningOutOfSteps(givenData)
+  
+  #Put every graph into a list
+  graphList <- list(graph1, graph2, graph3)
+  
+  #Print all graphs on one file if true, in separate files otherwise.
+  if(groupPlots){
+    allGraphs <- ggarrange(plotlist=graphList, ncol = 1, nrow = 3)
+  
+    ggexport(allGraphs, filename=saveToFile)
+  } else {
+    for(i in 1:length(graphList)){
+      
+      fileName <- paste(i, saveToFile, sep="_")
+      ggexport(graphList[i], filename=fileName)
+    }
+  }
+  
+  
+}
+
+
+
+
+#This function takes a dataset with specific column names (RunNumber, Succeeded., Generalized., StepLimit, TotalError, NumFailedCases, and FailedByStepLimit) and wrangles them into the appropriate data type if needed. Adds a new column AllFailuresOutOfSteps
+WrangleData <- function(givenData) {
+  
+  #Wrangle all of the data into their proper types in case they were imported in a weird format.
+  givenData$RunNumber <- suppressWarnings(as.numeric(givenData$RunNumber)) 
+  givenData$Succeeded. <- suppressWarnings(as.logical(givenData$Succeeded.))
+  givenData$Generalized. <- suppressWarnings(as.logical(givenData$Generalized.))
+  givenData$StepLimit <- suppressWarnings(as.numeric(givenData$StepLimit))
+  givenData$TotalError <- suppressWarnings(as.numeric(givenData$TotalError))
+  givenData$NumFailedCases <- suppressWarnings(as.numeric(givenData$NumFailedCases))
+  givenData$FailedByStepLimit <- suppressWarnings(as.numeric(givenData$FailedByStepLimit))
+  
+  #Add a new column, a boolean that says whether all of the failed cases came from running out of steps.
+  givenData$AllFailuresOutOfSteps = (givenData$NumFailedCases == givenData$FailedByStepLimit)
+
+  #Return the wrangled dataset
+  return(givenData)
+}
+
+
+
+
+#This function takes a dataset and a step limit and returns a graph of every run that generalized at the given step limit.
+GraphOriginalGeneralizations <- function(givenData, originalStep) {
+
+  #Filter the runs to only the ones that generalized that the given step limit. Get a vector of only the run numbers.
+  runsThatGeneralized <- subset(givenData, (givenData$StepLimit == originalStep & givenData$TotalError == 0))$RunNumber
+  
+  #Filter from the original dataset to only grab the ones that generalized at the given step limit
+  fullGenData <- givenData %>%
+  filter(RunNumber %in% runsThatGeneralized)
+  
+  #Create the graph, organized and colored by run number
+  graph <- ggplot(fullGenData, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE) + ggtitle(paste("Runs that generalized at step-limit", originalStep, sep=" "))
+  
+  #Return the graph
+  return(graph)
+}
+
+
+
+
+#This function takes the dataset and the step limit the problem was originally run on and returns a graph of every run that generalizes not at the given step limit.
+GraphOtherGeneralizations <- function(givenData, originalStep) {
+  
+  #Grab all of the runs that generalized at some point
+  allGeneralizations <- givenData %>%
+  group_by(RunNumber) %>%
+  filter(min(NumFailedCases) == 0)
+  
+  #Filter the runs to only the ones that generalized anywhere thats not the original step limit given and grab the run number
+  generalizedElsewhere <- subset(allGeneralizations, (StepLimit == originalStep & TotalError > 0))$RunNumber
+  
+  #Filter from the original dataset to only grab the ones that generalized somewhere other than the given step limit
+  fullRuns <- givenData %>%
+  filter(RunNumber %in% generalizedElsewhere)
+  
+  #Graph the runs, colored by their group number.
+  graph <- ggplot(fullRuns, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)  + ggtitle(paste("Runs that generalized somewhere not step-limit", originalStep, sep=" "))
+  
+  return(graph)
+}
+
+#This function takes a dataset and a number which corresponds to the last step limit of the dataset. This function returns a graph containing every run that was still running out of steps when the last step limit was computed.
+GraphRunningOutOfSteps <- function(givenData) {
+  
+  #Get the highest step limit
+  lastStepLimit <- max(givenData$StepLimit)
+  
+  #Take the maximum number of failed cases throughout the entire dataset (hoping one of them is close to the number of total cases) and multiply it by an arbitrary number so we can filter runs and make graphs cleaner
+  failedCasesThreshold <- max(givenData$NumFailedCases) * 0.05
+  
+  #Gets all runs that are below the given threshold and didn't generalize (min != 0)
+  fewFailedCases <- givenData %>%
+  group_by(RunNumber) %>%
+  filter(min(NumFailedCases) < failedCasesThreshold & min(NumFailedCases) != 0)
+  
+  #Gets the run number from the above dataset
+  outOfSteps <- subset(fewFailedCases, (StepLimit == lastStepLimit) & AllFailuresOutOfSteps)$RunNumber
+  
+  #get the runs that ran out of steps at the max step limit
+  getRuns <- givenData %>%
+  filter(RunNumber %in% outOfSteps)
+  
+  graph <- ggplot(getRuns, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)  + ggtitle(paste("Runs that are running out of steps at", lastStepLimit, sep=" "))
+  
+  return(graph)
+}
 ```
