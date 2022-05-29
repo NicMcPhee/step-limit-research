@@ -306,6 +306,7 @@ GraphOtherGeneralizations <- function(givenData, originalStep) {
   
   #Filter the runs to only the ones that generalized anywhere thats not the original step limit given and grab the run number
   generalizedElsewhere <- subset(allGeneralizations, (StepLimit == originalStep & TotalError > 0))$RunNumber
+  print(paste("The number of runs that generalized with step limit !=", originalStep, "was", length(generalizedElsewhere), sep=" "))
   
   #Filter from the original dataset to only grab the ones that generalized somewhere other than the given step limit
   fullRuns <- givenData %>%
