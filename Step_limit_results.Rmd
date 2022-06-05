@@ -1,0 +1,224 @@
+---
+title: "Step Limit Analysis"
+author: "Richard Lussier & Nic McPhee"
+date: "6/5/2022"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+params:
+    data_file: "dataset.txt"
+    original_step_limit: 200
+    graph_file_name: "dataset.png"
+    test_problem: "Last Index of Zero"
+    population_size: 500
+    max_generations: 500
+    num_training_cases: 100
+    num_test_cases: 1000
+    reproduction_operators: "50% Crossover, 50% UMAD (10% UMAD rate)"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library('ggplot2')
+library('dplyr')
+library('ggpubr')
+#library('gridExtra')
+
+dataFile <- params$data_file
+originalStepLimit <- params$original_step_limit
+graphFileName <- params$graph_file_name
+testProblem <- params$test_problem
+populationSize <- params$population_size
+maxGenerations <- params$max_generations
+numTrainingCases <- params$num_training_cases
+numTestCases <- params$num_test_cases
+reproductionOperators <- params$reproduction_operators
+```
+
+```{r functions, include=FALSE}
+
+#This function combines all of the helper functions below. It takes the dataset, the step limit the problem was originally run on, and a string, which is the .png file you would like to export the graphs to (for example, "example.png").
+GenerateGraphs <- function(givenData, originalStepLimit, saveToFile, groupPlots=TRUE) {
+  
+  givenData <- WrangleData(givenData)
+  
+  #Store the graphs into variables
+  graph1 <- GraphOriginalGeneralizations(givenData, originalStepLimit)
+  graph2 <- GraphOtherGeneralizations(givenData, originalStepLimit)
+  graph3 <- GraphRunningOutOfSteps(givenData)
+  
+  #Put every graph into a list
+  graphList <- list(graph1, graph2, graph3)
+  
+  #Print all graphs on one file if true, in separate files otherwise.
+  if(groupPlots){
+    allGraphs <- ggarrange(plotlist=graphList, ncol = 1, nrow = 3)
+  
+    ggexport(allGraphs, filename=saveToFile)
+  } else {
+    for(i in 1:length(graphList)){
+      
+      fileName <- paste(i, saveToFile, sep="_")
+      ggexport(graphList[i], filename=fileName)
+    }
+  }
+}
+
+#This function takes a dataset with specific column names (RunNumber, Succeeded., Generalized., StepLimit, TotalError, NumFailedCases, and FailedByStepLimit) and wrangles them into the appropriate data type if needed. Adds a new column AllFailuresOutOfSteps
+WrangleData <- function(givenDataFile) {
+  # Read the data from the given file name
+  givenData <- read.csv(givenDataFile, sep="")
+  #Wrangle all of the data into their proper types in case they were imported in a weird format.
+  givenData$RunNumber <- suppressWarnings(as.numeric(givenData$RunNumber)) 
+  givenData$Succeeded. <- suppressWarnings(as.logical(givenData$Succeeded.))
+  givenData$Generalized. <- suppressWarnings(as.logical(givenData$Generalized.))
+  givenData$StepLimit <- suppressWarnings(as.numeric(givenData$StepLimit))
+  givenData$TotalError <- suppressWarnings(as.numeric(givenData$TotalError))
+  givenData$NumFailedCases <- suppressWarnings(as.numeric(givenData$NumFailedCases))
+  givenData$FailedByStepLimit <- suppressWarnings(as.numeric(givenData$FailedByStepLimit))
+  
+  #Add a new column, a boolean that says whether all of the failed cases came from running out of steps.
+  givenData$AllFailuresOutOfSteps = (givenData$NumFailedCases == givenData$FailedByStepLimit)
+
+  #Return the wrangled dataset
+  return(givenData)
+}
+
+#This function takes a dataset and a step limit and returns a graph of every run that generalized at the given step limit.
+GraphOriginalGeneralizations <- function(givenData, originalStep) {
+
+  #Filter the runs to only the ones that generalized that the given step limit. Get a vector of only the run numbers.
+  runsThatGeneralized <- subset(givenData, (givenData$StepLimit == originalStep & givenData$TotalError == 0))$RunNumber
+  
+  #Filter from the original dataset to only grab the ones that generalized at the given step limit
+  fullGenData <- givenData %>%
+  filter(RunNumber %in% runsThatGeneralized)
+  
+  #Create the graph, organized and colored by run number
+  graph <- ggplot(fullGenData, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE) + ggtitle(paste("Runs that generalized at step-limit", originalStep, sep=" "))
+  
+  #Return the graph
+  return(list(graph=graph, numGeneralized=length(runsThatGeneralized)))
+}
+
+#This function takes the dataset and the step limit the problem was originally run on and returns a graph of every run that generalizes not at the given step limit.
+GraphOtherGeneralizations <- function(givenData, originalStep) {
+  
+  #Grab all of the runs that generalized at some point
+  allGeneralizations <- givenData %>%
+  group_by(RunNumber) %>%
+  filter(min(NumFailedCases) == 0)
+  
+  #Filter the runs to only the ones that generalized anywhere thats not the original step limit given and grab the run number
+  generalizedElsewhere <- subset(allGeneralizations, (StepLimit == originalStep & TotalError > 0))$RunNumber
+  # print(paste("The number of runs that generalized with step limit !=", originalStep, "was", length(generalizedElsewhere), sep=" "))
+  
+  #Filter from the original dataset to only grab the ones that generalized somewhere other than the given step limit
+  fullRuns <- givenData %>%
+  filter(RunNumber %in% generalizedElsewhere)
+  
+  #Graph the runs, colored by their group number.
+  graph <- ggplot(fullRuns, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)  + ggtitle(paste("Runs that generalized somewhere not step-limit", originalStep, sep=" "))
+  
+  return(list(graph=graph, numGeneralized=length(generalizedElsewhere)))
+}
+
+#This function takes a dataset and a number which corresponds to the last step limit of the dataset. This function returns a graph containing every run that was still running out of steps when the last step limit was computed.
+GraphRunningOutOfSteps <- function(givenData) {
+  
+  #Get the highest step limit
+  lastStepLimit <- max(givenData$StepLimit)
+  
+  #Take the maximum number of failed cases throughout the entire dataset (hoping one of them is close to the number of total cases) and multiply it by an arbitrary number so we can filter runs and make graphs cleaner
+  failedCasesThreshold <- max(givenData$NumFailedCases) * 0.05
+  
+  #Gets all runs that are below the given threshold and didn't generalize (min != 0)
+  fewFailedCases <- givenData %>%
+  group_by(RunNumber) %>%
+  filter(min(NumFailedCases) < failedCasesThreshold & min(NumFailedCases) != 0)
+  
+  #Gets the run number from the above dataset
+  outOfSteps <- subset(fewFailedCases, (StepLimit == lastStepLimit) & AllFailuresOutOfSteps)$RunNumber
+  
+  #get the runs that ran out of steps at the max step limit
+  getRuns <- givenData %>%
+  filter(RunNumber %in% outOfSteps)
+  
+  graph <- ggplot(getRuns, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)  + ggtitle(paste("Runs that are running out of steps at", lastStepLimit, sep=" "))
+  
+  return(list(graph=graph, numRunningOut=length(outOfSteps)))
+}
+```
+
+```{r include=FALSE}
+dataset <- read.csv(params$data_file, sep="")
+
+GenerateGraphs(params$data_file, originalStepLimit, graphFileName, groupPlots=FALSE)
+```
+
+## Overview & parameters
+
+These results were for `r testProblem` with the following parameters:
+
+* Original step limit = `r originalStepLimit`
+  * Min step limit = `r min(dataset$StepLimit)`
+  * Max step limit = `r max(dataset$StepLimit)`
+* Population size = `r populationSize`
+* Maximum generations = `r maxGenerations`
+* Number of training cases = `r numTrainingCases`
+* Number of test cases = `r numTestCases`
+* Reproduction operators = `r reproductionOperators`
+
+The results were in the "`r dataFile`" data file. Files for the
+corresponding graphs can be found at files with the names "*_`r graphFileName`"
+where "*" is replaced by 1, 2, and 3.
+
+## Runs that generalized at step limit `r originalStepLimit`
+
+```{r echo=FALSE}
+givenData <- WrangleData(params$data_file)
+
+originalGeneralizesResults = GraphOriginalGeneralizations(givenData, originalStepLimit)
+```
+
+The graph below shows the number of failed cases for various step limits for all
+the runs that generalized at the original step limit, i.e., `r originalStepLimit`.
+There were `r originalGeneralizesResults$numGeneralized` runs that generalized at step limit
+`r originalStepLimit`.
+All of these runs should have zero failed cases at step limit 
+`r originalStepLimit`, but some might fail one or more cases at higher or
+lower step limits.
+
+```{r echo=FALSE}
+originalGeneralizesResults$graph
+```
+
+## Runs that generalized elsewhere than step limit `r originalStepLimit`
+
+```{r echo=FALSE}
+otherGeneralizations = GraphOtherGeneralizations(givenData, originalStepLimit)
+```
+
+The graph below shows the number of failed cases for various step limits for all
+the runs that _didn't_ generalize at the original step limit (i.e., `r originalStepLimit`),
+but _did_ generalize at at least one other step limit. There were `r otherGeneralizations$numGeneralized` such runs.
+
+```{r echo=FALSE}
+otherGeneralizations$graph
+```
+
+## Runs that failed because they still ran out of steps at step limit `r max(dataset$StepLimit)`
+
+```{r echo=FALSE}
+outOfSteps = GraphRunningOutOfSteps(givenData)
+```
+
+The graph below shows the number of failed cases for various step limits for all
+the runs that failed all test cases because they ran out of steps. There were
+`r outOfSteps$numRunningOut` such runs.
+
+```{r echo=FALSE}
+outOfSteps$graph
+```
