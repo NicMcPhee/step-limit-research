@@ -4,7 +4,7 @@ author: "Richard Lussier"
 date: "12/9/2021"
 output: html_document
 params:
-    data_file: "dataset.txt"
+    data_file: "XOResultsMC"
     orignal_step_limit: 200
 ---
 
@@ -196,7 +196,7 @@ ggplot(someRunsFailingLessThan20, aes(x=StepLimit, y=NumFailedCases, group=facto
 ```
 
 ```{r}
-`500popMC` <- read.csv("~/R/step-limit-research/500popMC.txt", sep="")
+`500popMC` <- read.csv("500popMC.txt", sep="")
 
 `500popMC`$AllFailuresOutOfSteps = (`500popMC`$NumFailedCases == `500popMC`$FailedByStepLimit)
 
@@ -228,7 +228,18 @@ ggplot(MidDidntGenAt200, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumb
 ggplot(MidGenAt200, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
 
 ggplot(GenSomewhere,aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+
+
+
+
+XOMiddleCharData <- read.csv("XOResultsMC.txt", sep="")
+
+allXORunsMC <- ggplot(XOMiddleCharData, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE)
+
+ggexport(allXORunsMC, filename="hd_allXORunsMC.png", width=800, height=800)
 ```
+
+
 ```{r}
 
 #This function combines all of the helper functions below. It takes the dataset, the step limit the problem was originally run on, and a string, which is the .png file you would like to export the graphs to (for example, "example.png").
@@ -253,7 +264,7 @@ GenerateGraphs <- function(givenData, originalStepLimit, saveToFile, groupPlots=
     for(i in 1:length(graphList)){
       
       fileName <- paste(i, saveToFile, sep="_")
-      ggexport(graphList[i], filename=fileName)
+      ggexport(graphList[i], filename=fileName, width=800, height=800)
     }
   }
   

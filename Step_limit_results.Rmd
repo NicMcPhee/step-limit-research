@@ -7,14 +7,14 @@ output:
     toc: true
     toc_depth: 3
 params:
-    data_file: "dataset.txt"
+    data_file: "MutLIOZResults.txt"
     original_step_limit: 200
-    graph_file_name: "dataset.png"
+    graph_file_name: "temporary.png"
     test_problem: "Last Index of Zero"
     population_size: 500
     max_generations: 500
-    num_training_cases: 100
-    num_test_cases: 1000
+    num_training_cases: 200
+    num_test_cases: 2000
     reproduction_operators: "50% Crossover, 50% UMAD (10% UMAD rate)"
 ---
 
@@ -61,7 +61,7 @@ GenerateGraphs <- function(givenData, originalStepLimit, saveToFile, groupPlots=
     for(i in 1:length(graphList)){
       
       fileName <- paste(i, saveToFile, sep="_")
-      ggexport(graphList[i], filename=fileName)
+      ggexport(graphList[i], filename=fileName, width=800, height=800)
     }
   }
 }
@@ -88,8 +88,11 @@ WrangleData <- function(givenDataFile) {
 
 #This function takes a dataset and a step limit and returns a graph of every run that generalized at the given step limit.
 GraphOriginalGeneralizations <- function(givenData, originalStep) {
+  
+  #Filter the runs to only the ones that succeeded at the given step limit. Get a vector of only the run numbers.
+  runsThatSucceeded <- subset(givenData, (givenData$StepLimit == originalStep & givenData$Succeeded.))$RunNumber
 
-  #Filter the runs to only the ones that generalized that the given step limit. Get a vector of only the run numbers.
+  #Filter the runs to only the ones that generalized at the given step limit. Get a vector of only the run numbers.
   runsThatGeneralized <- subset(givenData, (givenData$StepLimit == originalStep & givenData$TotalError == 0))$RunNumber
   
   #Filter from the original dataset to only grab the ones that generalized at the given step limit
@@ -100,7 +103,7 @@ GraphOriginalGeneralizations <- function(givenData, originalStep) {
   graph <- ggplot(fullGenData, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(RunNumber))) + geom_line(alpha=0.5, show.legend=FALSE) + ggtitle(paste("Runs that generalized at step-limit", originalStep, sep=" "))
   
   #Return the graph
-  return(list(graph=graph, numGeneralized=length(runsThatGeneralized)))
+  return(list(graph=graph, numSucceeded=length(runsThatSucceeded), numGeneralized=length(runsThatGeneralized)))
 }
 
 #This function takes the dataset and the step limit the problem was originally run on and returns a graph of every run that generalizes not at the given step limit.
@@ -185,7 +188,7 @@ originalGeneralizesResults = GraphOriginalGeneralizations(givenData, originalSte
 
 The graph below shows the number of failed cases for various step limits for all
 the runs that generalized at the original step limit, i.e., `r originalStepLimit`.
-There were `r originalGeneralizesResults$numGeneralized` runs that generalized at step limit
+There were `r originalGeneralizesResults$numSucceeded` runs that succeeded and `r originalGeneralizesResults$numGeneralized` runs that generalized at step limit
 `r originalStepLimit`.
 All of these runs should have zero failed cases at step limit 
 `r originalStepLimit`, but some might fail one or more cases at higher or
