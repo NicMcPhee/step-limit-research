@@ -7,15 +7,15 @@ output:
     toc: true
     toc_depth: 3
 params:
-    data_file: "MutLIOZResults.txt"
-    original_step_limit: 200
-    graph_file_name: "temporary.png"
-    test_problem: "Last Index of Zero"
-    population_size: 500
-    max_generations: 500
+    data_file: "LIOZEightRange.txt"
+    original_step_limit: 800
+    graph_file_name: "LIOZEightRange.png"
+    test_problem: "Fuel Cost"
+    population_size: 1000
+    max_generations: 300
     num_training_cases: 200
     num_test_cases: 2000
-    reproduction_operators: "50% Crossover, 50% UMAD (10% UMAD rate)"
+    reproduction_operators: "100% UMAD (10% UMAD rate)"
 ---
 
 ```{r setup, include=FALSE}
@@ -95,6 +95,8 @@ GraphOriginalGeneralizations <- function(givenData, originalStep) {
   #Filter the runs to only the ones that generalized at the given step limit. Get a vector of only the run numbers.
   runsThatGeneralized <- subset(givenData, (givenData$StepLimit == originalStep & givenData$TotalError == 0))$RunNumber
   
+  print(runsThatGeneralized)
+  
   #Filter from the original dataset to only grab the ones that generalized at the given step limit
   fullGenData <- givenData %>%
   filter(RunNumber %in% runsThatGeneralized)
@@ -117,6 +119,8 @@ GraphOtherGeneralizations <- function(givenData, originalStep) {
   #Filter the runs to only the ones that generalized anywhere thats not the original step limit given and grab the run number
   generalizedElsewhere <- subset(allGeneralizations, (StepLimit == originalStep & TotalError > 0))$RunNumber
   # print(paste("The number of runs that generalized with step limit !=", originalStep, "was", length(generalizedElsewhere), sep=" "))
+  
+  print(generalizedElsewhere)
   
   #Filter from the original dataset to only grab the ones that generalized somewhere other than the given step limit
   fullRuns <- givenData %>%
@@ -144,6 +148,8 @@ GraphRunningOutOfSteps <- function(givenData) {
   
   #Gets the run number from the above dataset
   outOfSteps <- subset(fewFailedCases, (StepLimit == lastStepLimit) & AllFailuresOutOfSteps)$RunNumber
+  
+  print(outOfSteps)
   
   #get the runs that ran out of steps at the max step limit
   getRuns <- givenData %>%
