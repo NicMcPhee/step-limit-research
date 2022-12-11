@@ -1,0 +1,247 @@
+---
+title: "Direction_change.Rmd"
+author: "Richard Lussier & Nic McPhee"
+date: "12/9/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+```
+
+## The idea
+
+The goal is to count the number of _direction changes_ in either (or both) of
+the `TotalError` or `NumFailedCases` columns across a given run. That will then
+be a measure of that run's _stability_, with more direction changes indicating
+a more _unstable_ run.
+
+We might then also plot this alongside the cumulative `RanOutOfSteps`. If we're
+still running out of steps everywhere, then we suspect that both the number of
+direction changes and the cumulative `RanOutSteps` will keep going up "together".
+Maybe there's a correlation test to be done there?
+
+## Counting direction changes
+
+```{r functions, include=FALSE}
+# CountDirectionChangesForRun(testing_data)
+CountDirectionChangesForRun <- function(runData) {
+  with_diffs <- runData %>%
+    group_by(RunNumber) %>% 
+    mutate(te_diff = TotalError - lag(TotalError)) %>% 
+    mutate(nfc_diff = NumFailedCases - lag(NumFailedCases))
+
+  for(i in 1:nrow(with_diffs)) {
+    if (with_diffs[i, "StepLimit"] == 1) {
+      te_direction = with_diffs[i, "te_diff"]
+      nfc_direction = with_diffs[i, "nfc_diff"]
+      te_direction_changes = 0;
+      nfc_direction_changes = 0;
+    }
+
+    if (with_diffs[i, "StepLimit"] <= 1) {
+      runData[i, "te_direction_changes"] = 0
+      runData[i, "nfc_direction_changes"] = 0
+      next
+    }
+    
+    if (te_direction == 0) {
+      te_direction = with_diffs[i, "te_diff"]
+    } else if (sign(te_direction) == -sign(with_diffs[i, "te_diff"])) {
+      te_direction_changes = te_direction_changes + 1
+      te_direction = with_diffs[i, "te_diff"]
+    }
+    if (nfc_direction == 0) {
+      nfc_direction = with_diffs[i, "nfc_diff"]
+    } else if (sign(nfc_direction) == -sign(with_diffs[i, "nfc_diff"])) {
+      nfc_direction_changes = nfc_direction_changes + 1
+      nfc_direction = with_diffs[i, "te_diff"]
+    }
+    runData[i, "te_direction_changes"] = te_direction_changes
+    runData[i, "nfc_direction_changes"] = nfc_direction_changes
+  }
+  return(runData)
+}
+```
+
+### GCD
+
+#### Step limit 200
+
+```{r read_gcd_data_200}
+gcdTwoRange <- read.delim("~/R/step-limit-research/gcdTwoRange_v2.txt")
+gcdTwoRange_direction_changes <- CountDirectionChangesForRun(gcdTwoRange)
+```
+
+##### Direction changes for `TotalError` for GCD, step limit 200
+
+```{r gcd_te_direction_changes_200}
+ggplot(gcdTwoRange_direction_changes, aes(x=StepLimit, y=te_direction_changes, group=RunNumber, color=as.factor(RunNumber))) + geom_line()
+```
+
+Here there are something like four groups of behaviors:
+
+- Quite a few runs flatten out pretty early (before StepLimit 250)
+- A few other runs flatten out higher and later, i.e., their total error flips more and for longer
+- Several runs have a steady increase in the number of direction changes across
+  the whole range of step limits
+- One is like the previous ones, but increases _much_ faster than the others
+
+The ones that flatten out probably (but we'd have to look into that) use the
+approach of "unrolling" the loop a given number of times, and then ending. These
+are never really going to generalize across _all_ inputs because they have a
+fixed limit on how many times they can go through the "loop".
+
+The ones where the number of `TotalError` direction changes continues to grow
+probably have infinite loops and just rely on the step limit to end things. No
+idea what's going on with the one that grows so fast. It needs to switch
+direction for almost every increment of step limit. Is that a loop with just one
+or two instructions?
+
+##### Direction changes for `NumFailedCases` for GCD, step limit 200
+
+```{r gcd_nfc_direction_changes_200}
+ggplot(gcdTwoRange_direction_changes, aes(x=StepLimit, y=nfc_direction_changes, group=RunNumber, color=as.factor(RunNumber))) + geom_line()
+```
+
+This is pretty similar to the previous plot. There's an interesting ochre run
+in the middle that has the slope of the line sharply drop at around step limit
+625, but doesn't go _flat_. Not at all sure what's happening there.
+
+#### Step limit 800
+
+```{r read_gcd_data_800}
+gcdEightRange <- read.delim("~/R/step-limit-research/gcdEightRange_v2.txt")
+gcdEightRange_direction_changes <- CountDirectionChangesForRun(gcdEightRange)
+```
+
+##### Direction changes for `TotalError` for GCD, step limit 800
+
+```{r gcd_te_direction_changes_800}
+ggplot(gcdEightRange_direction_changes, aes(x=StepLimit, y=te_direction_changes, group=RunNumber, color=as.factor(RunNumber))) + geom_line()
+```
+
+Structurally similar to the GCD runs with step limit 200. Some flatten out at
+some point, presumably because of the "loop unrolling" approach, while others
+increase steadily across the entire graph.
+
+There's again an ochre colored run that has a noticable drop in the slope at
+just after step limit 500; don't know what's happening there.
+
+##### Direction changes for `NumFailedCases` for GCD, step limit 800
+
+```{r gcd_nfc_direction_changes_800}
+ggplot(gcdEightRange_direction_changes, aes(x=StepLimit, y=nfc_direction_changes, group=RunNumber, color=as.factor(RunNumber))) + geom_line()
+```
+
+This has a couple of interesting runs:
+
+- The light blue run that climbs steeply until shortly after step limit 250,
+  and then goes flat.
+- The green-ish-blue run that is flat and quite low until around step limit
+  625, then goes up pretty steeply for a little bit, and then goes flat again
+  around step limit 700, staying flat to the end. I really have no idea what
+  would trigger that odd change in that short phase.
+
+## Correlating with the number of cases that run out of steps
+
+### GCD 200
+
+To see how various notions of stability match up with running out of steps,
+this computes four possible measures of overall stability:
+
+- `te_std` is the standard deviation of the `TotalError` column for each run
+- `nfc_std` is the standard deviation of `NumFailedCases` for each run
+- `te_final` is the final (max) value of the number of direction changes in
+  the `TotalError` column
+- `nfc_final` is the final (max) value of the number of direction changes in
+  the `NumFailedCases` column
+  
+This also extracts `num_ran_out`, which is the number of cases that ran out of
+steps at step limit 1,000.
+
+```{r summary_stats_gcd_200}
+summary_stats_gcd_200 = gcdTwoRange_direction_changes %>% 
+    group_by(RunNumber) %>% 
+    summarise(te_sd = sd(TotalError, na.rm=TRUE), 
+              nfc_sd = sd(NumFailedCases, na.rm=TRUE), 
+              te_final = max(te_direction_changes, na.rm=TRUE), 
+              nfc_final = max(nfc_direction_changes, na.rm=TRUE), 
+              num_ran_out = min(RanOutOfSteps, na.rm=TRUE))
+```
+
+We can then correlate each of those four measures of stability with `num_ran_out`:
+
+```{r correlations_gcd_200}
+cor(summary_stats_gcd_200$te_sd, summary_stats_gcd_200$num_ran_out)
+cor(summary_stats_gcd_200$nfc_sd, summary_stats_gcd_200$num_ran_out)
+cor(summary_stats_gcd_200$te_final, summary_stats_gcd_200$num_ran_out)
+cor(summary_stats_gcd_200$nfc_final, summary_stats_gcd_200$num_ran_out)
+```
+
+Based on these results, the best correlation is with `nfc_final`, i.e., the
+total number of direction changes in the `NumFailedCases` for a run, so we'll
+probably use that moving forward.
+
+### GCD 800
+
+```{r summary_stats_gcd_800}
+summary_stats_gcd_800 = gcdEightRange_direction_changes %>% 
+    group_by(RunNumber) %>% 
+    summarise(te_sd = sd(TotalError, na.rm=TRUE), 
+              nfc_sd = sd(NumFailedCases, na.rm=TRUE), 
+              te_final = max(te_direction_changes, na.rm=TRUE), 
+              nfc_final = max(nfc_direction_changes, na.rm=TRUE), 
+              num_ran_out = min(RanOutOfSteps, na.rm=TRUE))
+```
+
+We can then correlate each of those four measures of stability with `num_ran_out`:
+
+```{r correlations_gcd_800}
+cor(summary_stats_gcd_800$te_sd, summary_stats_gcd_800$num_ran_out)
+cor(summary_stats_gcd_800$nfc_sd, summary_stats_gcd_800$num_ran_out)
+cor(summary_stats_gcd_800$te_final, summary_stats_gcd_800$num_ran_out)
+cor(summary_stats_gcd_800$nfc_final, summary_stats_gcd_800$num_ran_out)
+```
+
+### Middle Character
+
+#### Step limit 200
+
+```{r read_mc_data_200}
+mcTwoRange <- read.csv("~/R/step-limit-research/MCTwoRange_v2.txt", sep="")
+mcTwoRange_direction_changes <- CountDirectionChangesForRun(mcTwoRange)
+```
+
+##### Direction changes for `TotalError` for Middle Character, step limit 200
+
+```{r mc_te_direction_changes_200}
+ggplot(mcTwoRange_direction_changes, aes(x=StepLimit, y=te_direction_changes, group=RunNumber, color=as.factor(RunNumber))) + geom_line()
+```
+
+##### Direction changes for `NumFailedCases` for Middle Character, step limit 200
+
+```{r mc_nfc_direction_changes_200}
+ggplot(mcTwoRange_direction_changes, aes(x=StepLimit, y=nfc_direction_changes, group=RunNumber, color=as.factor(RunNumber))) + geom_line()
+```
+
+##### Correlations for Middle Character, step limit 200
+
+```{r summary_stats_mc_200}
+summary_stats_mc_200 = mcTwoRange_direction_changes %>% 
+    group_by(RunNumber) %>% 
+    summarise(te_sd = sd(TotalError, na.rm=TRUE), 
+              nfc_sd = sd(NumFailedCases, na.rm=TRUE), 
+              te_final = max(te_direction_changes, na.rm=TRUE), 
+              nfc_final = max(nfc_direction_changes, na.rm=TRUE), 
+              num_ran_out = min(RanOutOfSteps, na.rm=TRUE))
+```
+
+```{r correlations_mc_200}
+cor(summary_stats_mc_200$te_sd, summary_stats_mc_200$num_ran_out)
+cor(summary_stats_mc_200$nfc_sd, summary_stats_mc_200$num_ran_out)
+cor(summary_stats_mc_200$te_final, summary_stats_mc_200$num_ran_out)
+cor(summary_stats_mc_200$nfc_final, summary_stats_mc_200$num_ran_out)
+```
