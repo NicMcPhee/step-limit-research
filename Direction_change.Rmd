@@ -245,3 +245,79 @@ cor(summary_stats_mc_200$nfc_sd, summary_stats_mc_200$num_ran_out)
 cor(summary_stats_mc_200$te_final, summary_stats_mc_200$num_ran_out)
 cor(summary_stats_mc_200$nfc_final, summary_stats_mc_200$num_ran_out)
 ```
+
+#### Step limit 400
+
+```{r read_mc_data_400}
+mcFourRange <- read.csv("~/R/step-limit-research/MCFourRange_v2.txt", sep="")
+mcFourRange_direction_changes <- CountDirectionChangesForRun(mcFourRange)
+```
+
+##### Direction changes for `TotalError` for Middle Character, step limit 400
+
+```{r mc_te_direction_changes_400}
+ggplot(mcFourRange_direction_changes, aes(x=StepLimit, y=te_direction_changes, group=RunNumber, color=as.factor(RunNumber))) + geom_line()
+```
+
+##### Direction changes for `NumFailedCases` for Middle Character, step limit 400
+
+```{r mc_nfc_direction_changes_400}
+ggplot(mcFourRange_direction_changes, aes(x=StepLimit, y=nfc_direction_changes, group=RunNumber, color=as.factor(RunNumber))) + geom_line()
+```
+
+##### Correlations for Middle Character, step limit 400
+
+```{r summary_stats_mc_400}
+summary_stats_mc_400 = mcFourRange_direction_changes %>% 
+    group_by(RunNumber) %>% 
+    summarise(te_sd = sd(TotalError, na.rm=TRUE), 
+              nfc_sd = sd(NumFailedCases, na.rm=TRUE), 
+              te_final = max(te_direction_changes, na.rm=TRUE), 
+              nfc_final = max(nfc_direction_changes, na.rm=TRUE), 
+              num_ran_out = min(RanOutOfSteps, na.rm=TRUE))
+```
+
+```{r correlations_mc_400}
+cor(summary_stats_mc_400$te_sd, summary_stats_mc_400$num_ran_out)
+cor(summary_stats_mc_400$nfc_sd, summary_stats_mc_400$num_ran_out)
+cor(summary_stats_mc_400$te_final, summary_stats_mc_400$num_ran_out)
+cor(summary_stats_mc_400$nfc_final, summary_stats_mc_400$num_ran_out)
+```
+
+#### Step limit 800
+
+```{r read_mc_data_800}
+mcEightRange <- read.csv("~/R/step-limit-research/MCEightRange_v2.txt", sep="")
+mcEightRange_direction_changes <- CountDirectionChangesForRun(mcEightRange)
+```
+
+##### Direction changes for `TotalError` for Middle Character, step limit 800
+
+```{r mc_te_direction_changes_800}
+ggplot(mcEightRange_direction_changes, aes(x=StepLimit, y=te_direction_changes, group=RunNumber, color=as.factor(RunNumber))) + geom_line()
+```
+
+##### Direction changes for `NumFailedCases` for Middle Character, step limit 800
+
+```{r mc_nfc_direction_changes_800}
+ggplot(mcEightRange_direction_changes, aes(x=StepLimit, y=nfc_direction_changes, group=RunNumber, color=as.factor(RunNumber))) + geom_line()
+```
+
+##### Correlations for Middle Character, step limit 800
+
+```{r summary_stats_mc_800}
+summary_stats_mc_800 = mcEightRange_direction_changes %>% 
+    group_by(RunNumber) %>% 
+    summarise(te_sd = sd(TotalError, na.rm=TRUE), 
+              nfc_sd = sd(NumFailedCases, na.rm=TRUE), 
+              te_final = max(te_direction_changes, na.rm=TRUE), 
+              nfc_final = max(nfc_direction_changes, na.rm=TRUE), 
+              num_ran_out = min(RanOutOfSteps, na.rm=TRUE))
+```
+
+```{r correlations_mc_800}
+cor(summary_stats_mc_800$te_sd, summary_stats_mc_800$num_ran_out)
+cor(summary_stats_mc_800$nfc_sd, summary_stats_mc_800$num_ran_out)
+cor(summary_stats_mc_800$te_final, summary_stats_mc_800$num_ran_out)
+cor(summary_stats_mc_800$nfc_final, summary_stats_mc_800$num_ran_out)
+```
