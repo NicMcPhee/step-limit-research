@@ -36,6 +36,7 @@
 %%
 %% The first command in your LaTeX source must be the \documentclass command.
 \documentclass[sigconf]{acmart}
+\usepackage[]{todonotes}
 
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -197,7 +198,42 @@
 
 \section{Introduction}
 
+\todo[inline]{
+Say something about the importance of looping/recursion in programming, e.g.,
+it's necessity for Turing completeness.
+}
+
 \section{Background}
+
+One of the great strengths of Push is its support for a wide range of control
+flow mechanisms, allowing for the evolution of important constructs such
+as looping and recursion, along with perhaps less expected constructs such
+as loop unrolling. With this, however, comes the serious risk of unwanted
+execution paths such as infinite loops.
+
+It's easy enough to apply some kind of execution limit and stop a Push
+program when it exceeds that limit. Here, and historically, we use a
+\emph{step limit}, which is the maximum number of steps (instruction evaluations)
+the Push virtual machine can perform before we terminate execution. How,
+then, do we evaluate the performance (fitness) of a program that we
+terminate like this? A common approach in genetic programming would be
+to apply some kind of harsh penalty value, but harsh penalties tend to be
+quite ``discouraging'' to evolutionary processes, leading them to avoid that
+space altogether. For many interesting problems we need loops or recursion,
+though, so we don't want to ``scare'' evolution away from using looping
+constructs through penalties. Since the Push virtual machine is always in a legal
+state after every instruction evaluation, we have a convenient alternative:
+Evaluate that state as if it were the state after the program had terminated
+``normally'', i.e., by running out of instructions to execute. This avoids the
+use of harsh penalties, and in principle allows the evolutionary process to
+take advantage of what might be considered partial information when a program
+is terminated prematurely.
+
+\todo[inline]{Say something about an assumption that this might help
+discourage infinite loops and the evolution of bounded control mechanisms?
+That all gets fairly speculative, so I don't kow if we want to open that
+can of worms.}
+\todo[inline]{Say something about ``success'' and ``generalization''.}
 
 \section{Methodology \& Experimental Design}
 
