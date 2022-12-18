@@ -321,3 +321,81 @@ cor(summary_stats_mc_800$nfc_sd, summary_stats_mc_800$num_ran_out)
 cor(summary_stats_mc_800$te_final, summary_stats_mc_800$num_ran_out)
 cor(summary_stats_mc_800$nfc_final, summary_stats_mc_800$num_ran_out)
 ```
+
+### Last Index of Zero
+
+#### Step limit 200
+
+```{r read_lioz_data_200}
+liozTwoRange <- read.csv("~/R/step-limit-research/LIOZTwoRange_v2.txt", sep="")
+liozTwoRange_direction_changes <- CountDirectionChangesForRun(liozTwoRange)
+```
+
+##### Direction changes for `TotalError` for Middle Character, step limit 200
+
+```{r lioz_te_direction_changes_200}
+ggplot(liozTwoRange_direction_changes, aes(x=StepLimit, y=te_direction_changes, group=RunNumber, color=as.factor(RunNumber))) + geom_line()
+```
+
+##### Direction changes for `NumFailedCases` for Middle Character, step limit 200
+
+```{r lioz_nfc_direction_changes_200}
+ggplot(liozTwoRange_direction_changes, aes(x=StepLimit, y=nfc_direction_changes, group=RunNumber, color=as.factor(RunNumber))) + geom_line()
+```
+
+##### Correlations for Middle Character, step limit 200
+
+```{r summary_stats_lioz_200}
+summary_stats_lioz_200 = liozTwoRange_direction_changes %>% 
+    group_by(RunNumber) %>% 
+    summarise(te_sd = sd(TotalError, na.rm=TRUE), 
+              nfc_sd = sd(NumFailedCases, na.rm=TRUE), 
+              te_final = max(te_direction_changes, na.rm=TRUE), 
+              nfc_final = max(nfc_direction_changes, na.rm=TRUE), 
+              num_ran_out = min(RanOutOfSteps, na.rm=TRUE))
+```
+
+```{r correlations_lioz_200}
+cor(summary_stats_lioz_200$te_sd, summary_stats_lioz_200$num_ran_out)
+cor(summary_stats_lioz_200$nfc_sd, summary_stats_lioz_200$num_ran_out)
+cor(summary_stats_lioz_200$te_final, summary_stats_lioz_200$num_ran_out)
+cor(summary_stats_lioz_200$nfc_final, summary_stats_lioz_200$num_ran_out)
+```
+
+#### Step limit 800
+
+```{r read_lioz_data_800}
+liozEightRange <- read.csv("~/R/step-limit-research/LIOZEightRange_v2.txt", sep="")
+liozEightRange_direction_changes <- CountDirectionChangesForRun(liozEightRange)
+```
+
+##### Direction changes for `TotalError` for Middle Character, step limit 800
+
+```{r lioz_te_direction_changes_800}
+ggplot(liozEightRange_direction_changes, aes(x=StepLimit, y=te_direction_changes, group=RunNumber, color=as.factor(RunNumber))) + geom_line()
+```
+
+##### Direction changes for `NumFailedCases` for Middle Character, step limit 800
+
+```{r lioz_nfc_direction_changes_800}
+ggplot(liozEightRange_direction_changes, aes(x=StepLimit, y=nfc_direction_changes, group=RunNumber, color=as.factor(RunNumber))) + geom_line()
+```
+
+##### Correlations for Middle Character, step limit 800
+
+```{r summary_stats_lioz_800}
+summary_stats_lioz_800 = liozEightRange_direction_changes %>% 
+    group_by(RunNumber) %>% 
+    summarise(te_sd = sd(TotalError, na.rm=TRUE), 
+              nfc_sd = sd(NumFailedCases, na.rm=TRUE), 
+              te_final = max(te_direction_changes, na.rm=TRUE), 
+              nfc_final = max(nfc_direction_changes, na.rm=TRUE), 
+              num_ran_out = min(RanOutOfSteps, na.rm=TRUE))
+```
+
+```{r correlations_lioz_800}
+cor(summary_stats_lioz_800$te_sd, summary_stats_lioz_800$num_ran_out)
+cor(summary_stats_lioz_800$nfc_sd, summary_stats_lioz_800$num_ran_out)
+cor(summary_stats_lioz_800$te_final, summary_stats_lioz_800$num_ran_out)
+cor(summary_stats_lioz_800$nfc_final, summary_stats_lioz_800$num_ran_out)
+```
