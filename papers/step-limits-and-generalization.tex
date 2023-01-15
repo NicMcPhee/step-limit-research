@@ -205,6 +205,11 @@ it's necessity for Turing completeness.
 
 \section{Background}
 
+\todo[inline]{We need to add a short paragraph that says something about what's
+happening in this section.}
+
+\subsection{Step limits and infinite loops}
+
 One of the great strengths of Push is its support for a wide range of control
 flow mechanisms, allowing for the evolution of important constructs such
 as looping and recursion, along with perhaps less expected constructs such
@@ -212,28 +217,46 @@ as loop unrolling. With this, however, comes the serious risk of unwanted
 execution paths such as infinite loops.
 
 It's easy enough to apply some kind of execution limit and stop a Push
-program when it exceeds that limit. Here, and historically, we use a
+program when it exceeds that limit. Historically, and in this research, we use a
 \emph{step limit}, which is the maximum number of steps (instruction evaluations)
-the Push virtual machine can perform before we terminate execution. How,
-then, do we evaluate the performance (fitness) of a program that we
+the Push virtual machine can perform before we terminate execution.
+
+How, then, do we evaluate the performance (fitness) of a program that we
 terminate like this? A common approach in genetic programming would be
 to apply some kind of harsh penalty value, but harsh penalties tend to be
 quite ``discouraging'' to evolutionary processes, leading them to avoid that
-space altogether. For many interesting problems we need loops or recursion,
+space altogether. In the early phases of evolution, the value of exploring that
+space is limited (the loops are unlikely to be in any sense correct), making
+the cost of failure sufficient to devalue exploration in those regions.
+
+For many interesting problems we need loops or recursion,
 though, so we don't want to ``scare'' evolution away from using looping
 constructs through penalties. Since the Push virtual machine is always in a legal
 state after every instruction evaluation, we have a convenient alternative:
 Evaluate that state as if it were the state after the program had terminated
-``normally'', i.e., by running out of instructions to execute. This avoids the
+normally, i.e., by running out of instructions to execute. This avoids the
 use of harsh penalties, and in principle allows the evolutionary process to
 take advantage of what might be considered partial information when a program
 is terminated prematurely.
 
-\todo[inline]{Say something about an assumption that this might help
-discourage infinite loops and the evolution of bounded control mechanisms?
-That all gets fairly speculative, so I don't kow if we want to open that
-can of worms.}
-\todo[inline]{Say something about ``success'' and ``generalization''.}
+\todo[inline]{The following paragraph feels more "Introduction" than "Background" to me? - Nic}
+
+This approach of using step limits to terminate executions when necessary, and
+just treating the state after termination as the final state, is how most PushGP
+research has been done for well over a decade. As far as we're aware, however, this paper
+is the first effort to explore in any detail the impact of step limits on the behavior
+of evolved programs.
+
+\subsection{Errors and training and testing cases}
+
+
+\subsection{Success and generalization}
+
+Two concepts that will be important in this work are \emph{success} and \emph{generalization},
+both of which address different aspects about how successful the evolutionary process was
+in ``solving'' a particular problem. We say that a particular PushGP run \emph{succeeds} if 
+at least one evolved program is able to pass all the training cases, i.e., that program has zero
+error on each of the training cases. 
 
 \section{Methodology \& Experimental Design}
 
