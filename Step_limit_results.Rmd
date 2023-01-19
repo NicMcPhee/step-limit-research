@@ -48,13 +48,14 @@ GenerateGraphs <- function(givenData, originalStepLimit, saveToFile, groupPlots=
   graph1 <- GraphOriginalGeneralizations(givenData, originalStepLimit)
   graph2 <- GraphOtherGeneralizations(givenData, originalStepLimit)
   graph3 <- GraphRunningOutOfSteps(givenData)
+  graph4 <- CombineGeneralizations(givenData, originalStepLimit)
   
   #Put every graph into a list
-  graphList <- list(graph1, graph2, graph3)
+  graphList <- list(graph1, graph2, graph3, graph4)
   
   #Print all graphs on one file if true, in separate files otherwise.
   if(groupPlots){
-    allGraphs <- ggarrange(plotlist=graphList, ncol = 1, nrow = 3)
+    allGraphs <- ggarrange(plotlist=graphList, ncol = 1, nrow = 4)
   
     ggexport(allGraphs, filename=saveToFile)
   } else {
@@ -159,6 +160,36 @@ GraphRunningOutOfSteps <- function(givenData) {
   
   return(list(graph=graph, numRunningOut=length(outOfSteps)))
 }
+
+CombineGeneralizations <- function(givenData, originalStep) {
+  #Filter the runs to only the ones that generalized at the given step limit. Get a vector of only the run numbers.
+  runsThatGeneralizedAtStep <- subset(givenData, (givenData$StepLimit == originalStep &               givenData$TotalError == 0))$RunNumber
+  
+  #Filter from the original dataset to only grab the ones that generalized at the given step limit
+  fullGenData <- givenData %>%
+  filter(RunNumber %in% runsThatGeneralizedAtStep)
+
+  fullGenData$whereGen <- 'original'
+
+  allGeneralizations <- givenData %>%
+  group_by(RunNumber) %>%
+  filter(min(NumFailedCases) == 0)
+  
+  #Filter the runs to only the ones that generalized anywhere thats not the original step limit given and grab the run number
+  generalizedElsewhere <- subset(allGeneralizations, (StepLimit == originalStep & TotalError > 0))$RunNumber
+  
+  #Filter from the original dataset to only grab the ones that generalized somewhere other than the given step limit
+  dataGenElsewhere <- givenData %>%
+  filter(RunNumber %in% generalizedElsewhere)
+  
+  dataGenElsewhere$whereGen <- 'elsewhere'
+
+  finalData <- rbind(fullGenData, dataGenElsewhere)
+
+  graph <- ggplot(finalData, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(whereGen))) + geom_line(alpha=0.3, show.legend=FALSE)  + ggtitle("All runs that generalized") + scale_color_manual(values = c("dark red", "dark blue"))
+
+  return(graph)
+}
 ```
 
 ```{r include=FALSE}
@@ -232,36 +263,14 @@ the runs that failed all test cases because they ran out of steps. There were
 outOfSteps$graph
 ```
 
-##Combining all of the runs that generalized
+## Combining all of the runs that generalized
 
 The graph below combines the first two graphs seen in this report. The runs highlighted in blue correspond to runs that generalized at the original step-limit of `r originalStepLimit`. The runs highlighted in red correspond to runs that generalized somewhere other than `r originalStepLimit`.
 
 ```{r echo=FALSE}
-#Filter the runs to only the ones that generalized at the given step limit. Get a vector of only the run numbers.
-runsThatGeneralizedAtStep <- subset(givenData, (givenData$StepLimit == originalStepLimit &               givenData$TotalError == 0))$RunNumber
-  
-  #Filter from the original dataset to only grab the ones that generalized at the given step limit
-fullGenData <- givenData %>%
-  filter(RunNumber %in% runsThatGeneralizedAtStep)
 
-fullGenData$whereGen <- 'original'
+combinedGraph <- CombineGeneralizations(givenData, originalStepLimit)
 
-allGeneralizations <- givenData %>%
-  group_by(RunNumber) %>%
-  filter(min(NumFailedCases) == 0)
-  
-  #Filter the runs to only the ones that generalized anywhere thats not the original step limit given and grab the run number
-generalizedElsewhere <- subset(allGeneralizations, (StepLimit == originalStepLimit & TotalError > 0))$RunNumber
-  
-  #Filter from the original dataset to only grab the ones that generalized somewhere other than the given step limit
-dataGenElsewhere <- givenData %>%
-  filter(RunNumber %in% generalizedElsewhere)
-  
-dataGenElsewhere$whereGen <- 'elsewhere'
+combinedGraph
 
-finalData <- rbind(fullGenData, dataGenElsewhere)
-
-graph <- ggplot(finalData, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(whereGen))) + geom_line(alpha=0.3, show.legend=FALSE)  + ggtitle("All runs that generalized") + scale_color_manual(values = c("dark red", "dark blue"))
-
-graph
 ```
