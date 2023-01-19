@@ -186,7 +186,7 @@ CombineGeneralizations <- function(givenData, originalStep) {
 
   finalData <- rbind(fullGenData, dataGenElsewhere)
 
-  graph <- ggplot(finalData, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(whereGen))) + geom_line(alpha=0.3, show.legend=FALSE)  + ggtitle("All runs that generalized") + scale_color_manual(values = c("dark red", "dark blue"))
+  graph <- ggplot(finalData, aes(x=StepLimit, y=NumFailedCases, group=factor(RunNumber), color=factor(whereGen))) + geom_line(alpha=0.3, show.legend=FALSE)  + ggtitle("All runs that generalized") + scale_color_manual(values = c("dark red", "dark blue")) + theme(axis.text=element_text(size=13), axis.title=element_text(size=15), plot.title=element_text(size=20))
 
   return(graph)
 }
