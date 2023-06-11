@@ -368,6 +368,34 @@ GraphRunningOutOfSteps <- function(givenData) {
 ```
 
 ```{r}
+
+mc200 <- read.csv("MCTwoRange.txt", sep="")
+
+mc800 <- read.csv("MCEightRange.txt", sep="")
+
+mc200$Start <- 200
+
+mc800$Start <- 800
+
+mc200 <- mc200 %>% group_by(RunNumber) %>% filter(min(NumFailedCases) == 0)
+
+mc800 <- mc800 %>% group_by(RunNumber) %>% filter(min(NumFailedCases) == 0)
+
+mcTot <- rbind(mc200, mc800)
+
+base <- ggplot(data=mcTot, 
+                aes(x=StepLimit,y=NumFailedCases, group=interaction(Start, RunNumber), color=factor(RunNumber))) + 
+  geom_line(alpha=0.5) + 
+  theme_bw() +
+  labs(title ="",  x = "Step Limit", y = "NumFailedCases") +
+  theme(legend.position = "none")
+
+facet_names <- c(
+  `10` = "200",
+  `900` = "800"
+)
+
+
 main <- base + facet_wrap(~ Start, ncol = 2, labeller = as_labeller(facet_names))
  
  nStart <- length(unique(mcTot$Start))
