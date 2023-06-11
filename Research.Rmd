@@ -15,6 +15,8 @@ library('ggplot2')
 library('dplyr')
 library('ggpubr')
 library('gridExtra')
+library('ggforce')
+library('ggpmisc')
 ```
 
 
@@ -363,4 +365,54 @@ GraphRunningOutOfSteps <- function(givenData) {
   
   return(graph)
 }
+```
+
+```{r}
+main <- base + facet_wrap(~ Start, ncol = 2, labeller = as_labeller(facet_names))
+ 
+ nStart <- length(unique(mcTot$Start))
+ 
+ insets <- lapply(seq_len(nStart), function(i) {
+   base + ggforce::facet_wrap_paginate(~ Start, nrow = 1, ncol = 1, page = i) +
+     coord_cartesian(xlim = c(650,750), ylim = c(0, 50)) +
+     guides(colour = "none", x = "none", y = "none") +
+     theme(strip.background = element_blank(),
+           strip.text = element_blank(),
+           axis.title = element_blank(),
+           plot.background = element_blank())
+ })
+ 
+# ins1 <- base + ggforce::facet_wrap_paginate(~ Start, nrow = 1, ncol = 1, page=1) +
+#     coord_cartesian(xlim = c(100,800), ylim = c(500, 550)) +
+#     guides(colour = "none", x = "none", y = "none") +
+#     theme(strip.background = element_blank(),
+#           strip.text = element_blank(),
+#           axis.title = element_blank(),
+#         plot.background = element_blank())
+ 
+# ins2 <- base + ggforce::facet_wrap_paginate(~ Start, nrow = 1, ncol = 2, page=1) +
+#     coord_cartesian(xlim = c(300,500), ylim = c(500, 550)) +
+#     guides(colour = "none", x = "none", y = "none") +
+#     theme(strip.background = element_blank(),
+#           strip.text = element_blank(),
+#           axis.title = element_blank(),
+#           plot.background = element_blank())
+ 
+ 
+ insets <- tibble(x = rep(.95, nStart),
+                  y = rep(1000, nStart),
+                  plot = insets,
+                  Start = unique(mcTot$Start))
+ 
+ finalPlot <- main +
+   geom_plot_npc(data = insets, 
+                 aes(npcx = x, npcy = y, label = plot,
+                     vp.width = 0.5, vp.height = 0.5)) +
+   annotate(geom = "rect", 
+            xmin = 650, xmax = 750, ymin = 0, ymax = 50,
+            linetype = "dotted", fill = NA, colour = "black") 
+ 
+ finalPlot
+ 
+ #ggexport(finalPlot, filename="mcFacet.pdf", pointsize = 1, width = 10, height=6)
 ```
