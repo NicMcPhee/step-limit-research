@@ -515,13 +515,13 @@ generate_GPTP_graph <- function(problem_name, datafile_200, datafile_800, inset_
   ggexport(finalPlot, filename=output_file, pointsize = 1, width = 8, height=height)
 }
 
-# generate_GPTP_graph("Fuel Cost", "fuelTwoRange.txt", "fuelEightRange.txt", c(30,110,800,1400), c(70,300,800,1400), TRUE)
+generate_GPTP_graph("Fuel Cost", "fuelTwoRange.txt", "fuelEightRange.txt", c(30,110,800,1400), c(70,300,800,1400), TRUE)
 
-# generate_GPTP_graph("GCD", "gcdTwoRange_v2.txt", "gcdEightRange_v2.txt", c(180,370,0,30), c(750, 900, 0, 50), FALSE)
+generate_GPTP_graph("GCD", "gcdTwoRange_v2.txt", "gcdEightRange_v2.txt", c(180,370,0,30), c(750, 900, 0, 50), FALSE)
 
 generate_GPTP_graph("LIOZ", "LIOZTwoRange_v2.txt", "LIOZEightRange_v2.txt", c(150, 300, 0, 15), c(650,900,0,15), TRUE)
 
-# generate_GPTP_graph("MC", "MCTwoRange_v2.txt", "MCEightRange_v2.txt", c(370,430,0,30), c(750,900,0,30), FALSE)
+generate_GPTP_graph("MC", "MCTwoRange_v2.txt", "MCEightRange_v2.txt", c(370,430,0,30), c(750,900,0,30), FALSE)
 ```
 
 ```{r}
