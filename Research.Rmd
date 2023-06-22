@@ -368,14 +368,181 @@ GraphRunningOutOfSteps <- function(givenData) {
 ```
 
 ```{r}
+generate_GPTP_graph <- function(problem_name, datafile_200, datafile_800, inset_bounds_200, inset_bounds_800, two_color) {
+  data200 <- read.csv(datafile_200, sep="")
+  data800 <- read.csv(datafile_800, sep="")
+  
+  data200$Start = 200
+  data200$xmin = inset_bounds_200[[1]]
+  data200$xmax = inset_bounds_200[[2]]
+  data200$ymin = inset_bounds_200[[3]]
+  data200$ymax = inset_bounds_200[[4]]
+  
+  data800$Start = 800
+  data800$xmin = inset_bounds_800[[1]]
+  data800$xmax = inset_bounds_800[[2]]
+  data800$ymin = inset_bounds_800[[3]]
+  data800$ymax = inset_bounds_800[[4]]
+  
+  data200 <- data200 %>% group_by(RunNumber) %>% filter(min(NumFailedCases) == 0)
+  
+  runs200ThatGeneralizedAtStep200 <- subset(data200, (data200$StepLimit == 200 & data200$TotalError == 0))$RunNumber
+  
+  #Filter from the original dataset to only grab the ones that generalized at the given step limit
+  fullGenData200 <- data200 %>%
+    filter(RunNumber %in% runs200ThatGeneralizedAtStep200)
+  
+  if(nrow(fullGenData200) != 0) {
+    fullGenData200$whereGen <- 'Original Step Limit'
+  }
+  
+  allGeneralizations200 <- data200 %>%
+    group_by(RunNumber) %>%
+    filter(min(NumFailedCases) == 0)
+  
+  #Filter the runs to only the ones that generalized anywhere thats not the original step limit given and grab the run number
+  generalizedElsewhere200 <- subset(allGeneralizations200, (StepLimit == 200 & TotalError > 0))$RunNumber
+  
+  #Filter from the original dataset to only grab the ones that generalized somewhere other than the given step limit
+  dataGenElsewhere200 <- data200 %>%
+    filter(RunNumber %in% generalizedElsewhere200)
+  
+  if(nrow(dataGenElsewhere200 != 0)) {
+    dataGenElsewhere200$whereGen <- 'Other Step Limit'
+  }
+
+  data800 <- data800 %>% group_by(RunNumber) %>% filter(min(NumFailedCases) == 0)
+  
+  runs800ThatGeneralizedAtStep800 <- subset(data800, (data800$StepLimit == 800 & data800$TotalError == 0))$RunNumber
+  
+  #Filter from the original dataset to only grab the ones that generalized at the given step limit
+  fullGenData800 <- data800 %>%
+    filter(RunNumber %in% runs800ThatGeneralizedAtStep800)
+  
+  if(nrow(fullGenData800) != 0) {
+    fullGenData800$whereGen <- 'Original Step Limit'
+  }
+
+  allGeneralizations800 <- data800 %>%
+    group_by(RunNumber) %>%
+    filter(min(NumFailedCases) == 0)
+  
+  #Filter the runs to only the ones that generalized anywhere thats not the original step limit given and grab the run number
+  generalizedElsewhere800 <- subset(allGeneralizations800, (StepLimit == 800 & TotalError > 0))$RunNumber
+  
+  #Filter from the original dataset to only grab the ones that generalized somewhere other than the given step limit
+  dataGenElsewhere800 <- data800 %>%
+    filter(RunNumber %in% generalizedElsewhere800)
+  
+  if(nrow(dataGenElsewhere800 != 0)) {
+    dataGenElsewhere800$whereGen <- 'Other Step Limit'
+  }
+  
+  # dataTot <- rbind(data200, data800)
+  
+  dataTot <- rbind(fullGenData200, dataGenElsewhere200, fullGenData800, dataGenElsewhere800)
+  
+  # coloring <- ifelse(two_color, factor(dataTot$whereGen), factor(dataTot$RunNumber))
+  
+  if (two_color) {
+    base <- ggplot(data=dataTot, 
+                aes(x=StepLimit,y=NumFailedCases, group=interaction(Start, RunNumber), color=factor(whereGen))) + 
+    geom_line(alpha=0.4) + 
+    theme_bw() +
+    labs(title ="",  x = "Step Limit", y = "NumFailedCases") + 
+    scale_color_manual(values = c("#00BFC4", "dark red")) +
+    theme(legend.position = "bottom", legend.title = element_blank())
+
+    if (problem_name == "Fuel Cost") {
+      base <- base + theme(legend.position = "none")
+    }
+  } else {
+    base <- ggplot(data=dataTot, 
+                aes(x=StepLimit,y=NumFailedCases, group=interaction(Start, RunNumber), color=factor(dataTot$RunNumber))) + 
+    geom_line(alpha=0.4) + 
+    theme_bw() +
+    labs(title ="",  x = "Step Limit", y = "NumFailedCases") +
+    theme(legend.position = "none")
+  }
+
+  facet_names <- c(
+    `200` = paste(problem_name, "step limit 200 runs that generalized somewhere"),
+    `800` = paste(problem_name, "step limit 800 runs that generalized somewhere")
+  )
+  
+  lims <- list(
+    list(c(inset_bounds_200[[1]], inset_bounds_200[[2]]),
+         c(inset_bounds_200[[3]], inset_bounds_200[[4]])),
+    list(c(inset_bounds_800[[1]], inset_bounds_800[[2]]),
+         c(inset_bounds_800[[3]], inset_bounds_800[[4]]))
+  )
+  
+  output_file = paste(problem_name, "_facet.pdf", sep = "")
+  
+  main <- base + facet_wrap(~ Start, ncol = 2 , labeller = as_labeller(facet_names))
+ 
+  nStart <- length(unique(dataTot$Start))
+ 
+  insets <- lapply(seq_len(nStart), function(i) {
+    base + ggforce::facet_wrap_paginate(~ Start, nrow = 1, ncol = 1, page = i) +
+    coord_cartesian(xlim = lims[[i]][[1]], ylim = lims[[i]][[2]]) +
+    guides(colour = "none", x = "none", y = "none") +
+    theme(strip.background = element_blank(),
+           strip.text = element_blank(),
+           axis.title = element_blank(),
+           plot.background = element_blank())
+  })
+  
+  insets <- tibble(x = rep(.95, nStart),
+                   y = rep(1, nStart),
+                   plot = insets,
+                   Start = unique(dataTot$Start))
+  
+  finalPlot <- main +
+     geom_plot_npc(data = insets,
+                   aes(npcx = x, npcy = y, label = plot,
+                       vp.width = 0.5, vp.height = 0.5)) +
+    geom_rect(mapping = aes(x = NULL,y = NULL, xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax), 
+              data = dataTot,
+              linetype = "dotted", 
+              fill = NA, 
+              colour = "black")
+  
+  height = 4
+  if (problem_name == "LIOZ") {
+    height = 4.5
+  }
+  ggexport(finalPlot, filename=output_file, pointsize = 1, width = 8, height=height)
+}
+
+# generate_GPTP_graph("Fuel Cost", "fuelTwoRange.txt", "fuelEightRange.txt", c(30,110,800,1400), c(70,300,800,1400), TRUE)
+
+# generate_GPTP_graph("GCD", "gcdTwoRange_v2.txt", "gcdEightRange_v2.txt", c(180,370,0,30), c(750, 900, 0, 50), FALSE)
+
+generate_GPTP_graph("LIOZ", "LIOZTwoRange_v2.txt", "LIOZEightRange_v2.txt", c(150, 300, 0, 15), c(650,900,0,15), TRUE)
+
+# generate_GPTP_graph("MC", "MCTwoRange_v2.txt", "MCEightRange_v2.txt", c(370,430,0,30), c(750,900,0,30), FALSE)
+```
+
+```{r}
 
 mc200 <- read.csv("MCTwoRange.txt", sep="")
 
-mc800 <- read.csv("MCEightRange.txt", sep="")
+mc800 <- read.csv("MCEightRange_v2.txt", sep="")
+
+# c(375, 475, 0, 50)
 
 mc200$Start <- 200
+mc200$xmin <- 375
+mc200$xmax <- 475
+mc200$ymin <- 0
+mc200$ymax <- 50
 
 mc800$Start <- 800
+mc800$xmin <- 650
+mc800$xmax <- 750
+mc800$ymin <- 0
+mc800$ymax <- 50
 
 mc200 <- mc200 %>% group_by(RunNumber) %>% filter(min(NumFailedCases) == 0)
 
@@ -391,18 +558,37 @@ base <- ggplot(data=mcTot,
   theme(legend.position = "none")
 
 facet_names <- c(
-  `10` = "200",
-  `900` = "800"
+  `200` = "Both MC step limit 200 runs that generalized somewhere",
+  `800` = "All 8 MC step limit 800 runs that generalized somewhere"
 )
 
+# # New facet label names for dose variable
+# dose.labs <- c("D0.5", "D1", "D2")
+# names(dose.labs) <- c("0.5", "1", "2")
+# 
+# # New facet label names for supp variable
+# supp.labs <- c("Orange Juice", "Vitamin C")
+# names(supp.labs) <- c("OJ", "VC")
+# 
+# # Create the plot
+# p + facet_grid(
+#   dose ~ supp, 
+#   labeller = labeller(dose = dose.labs, supp = supp.labs)
+#   )
 
-main <- base + facet_wrap(~ Start, ncol = 2, labeller = as_labeller(facet_names))
+lims <- list(
+  list(c(375, 475), c(0, 50)),
+  list(c(650, 750), c(0, 50))
+)
+
+main <- base + facet_wrap(~ Start, ncol = 2 , labeller = as_labeller(facet_names))
  
- nStart <- length(unique(mcTot$Start))
+nStart <- length(unique(mcTot$Start))
  
- insets <- lapply(seq_len(nStart), function(i) {
+insets <- lapply(seq_len(nStart), function(i) {
    base + ggforce::facet_wrap_paginate(~ Start, nrow = 1, ncol = 1, page = i) +
-     coord_cartesian(xlim = c(650,750), ylim = c(0, 50)) +
+     # coord_cartesian(xlim = c(650,750), ylim = c(0, 50)) +
+     coord_cartesian(xlim = lims[[i]][[1]], ylim = lims[[i]][[2]]) +
      guides(colour = "none", x = "none", y = "none") +
      theme(strip.background = element_blank(),
            strip.text = element_blank(),
@@ -427,20 +613,22 @@ main <- base + facet_wrap(~ Start, ncol = 2, labeller = as_labeller(facet_names)
 #           plot.background = element_blank())
  
  
- insets <- tibble(x = rep(.95, nStart),
-                  y = rep(1000, nStart),
-                  plot = insets,
-                  Start = unique(mcTot$Start))
- 
- finalPlot <- main +
-   geom_plot_npc(data = insets, 
+insets <- tibble(x = rep(.95, nStart),
+                 y = rep(1, nStart),
+                 plot = insets,
+                 Start = unique(mcTot$Start))
+
+finalPlot <- main +
+   geom_plot_npc(data = insets,
                  aes(npcx = x, npcy = y, label = plot,
                      vp.width = 0.5, vp.height = 0.5)) +
-   annotate(geom = "rect", 
-            xmin = 650, xmax = 750, ymin = 0, ymax = 50,
-            linetype = "dotted", fill = NA, colour = "black") 
+  geom_rect(mapping = aes(x = NULL,y = NULL, xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax), 
+            data = mcTot,
+            linetype = "dotted", 
+            fill = NA, 
+            colour = "black")
+
+finalPlot
  
- finalPlot
- 
- #ggexport(finalPlot, filename="mcFacet.pdf", pointsize = 1, width = 10, height=6)
+ggexport(finalPlot, filename="mcFacet.pdf", pointsize = 1, width = 8, height=3)
 ```
